@@ -19,7 +19,11 @@ const CloudantDbMock = {
     total_rows: 2,
     rows: [ { id: 'hello', key: 'hello', value: { rev: 'rev123' }, doc: { _id: 'hello', _rev: 'rev123', value: { 'world': 'with love!' } } } ]
   }),
-  bulk: (opts, cb) => cb(null, opts.docs)
+  bulk: (opts, cb) => {
+    let results = [];
+    opts.docs.forEach(doc => results.push({ _id: doc._id, _rev: doc._rev, ok: true}));
+    cb(null, results)
+  }
 };
 
 for(let method in CloudantDbMock) sinon.spy(CloudantDbMock, method);

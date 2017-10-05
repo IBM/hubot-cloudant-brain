@@ -11,8 +11,6 @@ const Cloudant = require('cloudant');
 const url = require('url');
 const _ = require('lodash');
 
-const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
-
 module.exports = (robot) => {
 
   if (!process.env.CLOUDANT_URL) throw new Error('Env var CLOUDANT_URL is required for hubot-cloudant-brain to work');
@@ -54,7 +52,7 @@ module.exports = (robot) => {
       }
 
       function process(total) {
-        cache = deepClone(_private);
+        cache = _.cloneDeep(_private);
         robot.brain.mergeData({_private: _private});
         robot.brain.setAutoSave(true);
         robot.brain.resetSaveInterval(30);
@@ -70,14 +68,19 @@ module.exports = (robot) => {
   robot.brain.on('save', (data) => {
     if (!db) return console.error('ERROR: hubot-cloudant-brain still not ready to save');
     let docs = [];
+
+
+    let changes = {};
     let deletes = {};
+
     for(let key in data._private) {
       if (data._private[key] === null || data._private[key] === undefined) {
         delete data._private[key];
         continue;
       }
       if (!_.isEqual(cache[key], data._private[key])) {
-        docs.push({ _id: key, _rev: rev[key], value: data._private[key]});
+        changes[key] = _.cloneDeep(data._private[key]);
+        docs.push({ _id: key, _rev: rev[key], value: changes[key]});
       }
     }
     for(let key in cache) {
@@ -87,15 +90,21 @@ module.exports = (robot) => {
       }
     }
 
-    robot.logger.debug('hubot-cloudant-brain: ' + docs.length + ' new or updated records.', docs);
+    robot.logger.debug('hubot-cloudant-brain: ' + docs.length + ' new or updated records.');
     if (docs.length === 0) return;
     db.bulk({docs:docs}, (err, results) => {
       if (err) return console.error('ERROR: hubot-cloudant-brain failed to save data', err);
       robot.logger.debug('hubot-cloudant-brain: saved ' + results.length + ' records.');
       results.forEach((doc) => {
-        rev[doc.id] = doc.rev;
+        if (!doc.ok) console.error('ERROR', doc);
+        if (deletes[doc.id]) {
+          delete rev[doc.id];
+          delete cache[doc.id];
+        } else {
+          rev[doc.id] = doc.rev;
+          cache[doc.id] = changes[doc.id];
+        }
       });
-      cache = deepClone(data._private);
       robot.brain.emit('saved');
     });
 
