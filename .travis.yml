@@ -1,0 +1,15 @@
+language: node_js
+node_js:
+  - "node"
+before_install:
+  - npm i -g makeshift && makeshift -r https://npm-registry.whitewater.ibm.com
+deploy:
+  provider: npm
+  email: tsaiyl@tw.ibm.com
+  api_key: ${NPM_TOKEN}
+  on:
+    tags: true
+sudo: false
+cache:
+  directories:
+    - node_modules
