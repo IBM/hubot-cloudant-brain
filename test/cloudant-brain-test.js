@@ -5,10 +5,10 @@ chai.use(require('sinon-chai'))
 const proxyquire = require('proxyquire').noCallThru();
 const Promise = require('bluebird');
 const sinon = require('sinon');
-
+const Hubot = require('hubot');
+const Robot = Hubot.Robot;
 
 process.env.CLOUDANT_URL = 'https://user:pass@cloudant.com/mydb';
-
 
 const CloudantMock = (ur, cb) => cb(null, { db: CloudantDbMock });
 
@@ -22,36 +22,55 @@ const CloudantDbMock = {
   bulk: (opts, cb) => cb(null, opts.docs)
 };
 
-const Hubot = require('hubot');
-const Robot = Hubot.Robot;
+for(let method in CloudantDbMock) sinon.spy(CloudantDbMock, method);
 
 proxyquire('../src/cloudant-brain.js', { 'cloudant': CloudantMock });
-
 
 describe('cloudant-brain', function() {
 
   this.timeout(5000);
 
-  it('exports a function', () => expect(require('../index')).to.be.a('Function'));
-
-  it('connects to cloudant', () => {
-    const robot = new Robot(null, 'mock-adapter-v3', false, 'hubot');
-    robot.loadFile(path.resolve('src/'), 'cloudant-brain.js');
-    robot.run();
-    expect(robot.brain.get('hello')).to.be.eql({ 'world': 'with love!'});
+  beforeEach(function() {
+    for(let method in CloudantDbMock) CloudantDbMock[method].reset();
+    this.robot = new Robot(null, 'mock-adapter-v3', false, 'hubot');
+    this.robot.loadFile(path.resolve('src/'), 'cloudant-brain.js');
+    this.robot.run();
+    sinon.spy(this.robot.logger, 'debug');
   });
 
-  it('saves data', () => {
-    const robot = new Robot(null, 'mock-adapter-v3', false, 'hubot');
-    robot.loadFile(path.resolve('src/'), 'cloudant-brain.js');
-    robot.run();
-    sinon.spy(robot.logger, 'debug');
-    robot.brain.emit('save', robot.brain.data);
-    expect(robot.logger.debug).to.have.been.calledWith('hubot-cloudant-brain: 0 new or updated records.');
+  afterEach(function() {
+    this.robot.shutdown();
+  });
 
-    robot.brain.set('new key', 'new value');
-    robot.brain.emit('save', robot.brain.data);
-    expect(robot.logger.debug).to.have.been.calledWith('hubot-cloudant-brain: saved 1 records.');
+
+  it('exports a function', () => expect(require('../index')).to.be.a('Function'));
+
+  it('connects to cloudant', function() {
+    expect(this.robot.brain.get('hello')).to.be.eql({ 'world': 'with love!'});
+  });
+
+  it('will not actually save to cloudant without new data', function() {
+    this.robot.brain.emit('save', this.robot.brain.data);
+    expect(CloudantDbMock.bulk).to.have.not.been.called;
+  });
+
+  it('actually saves to cloudant with new data', function() {
+    this.robot.brain.set('new key', 'new value');
+    this.robot.brain.emit('save', this.robot.brain.data);
+    expect(CloudantDbMock.bulk).to.have.been.calledWith({ docs: [{ _id: "new key", _rev: undefined, value: "new value" }] });
+  });
+
+  it('actually saves to cloudant with updated data', function() {
+    this.robot.brain.set('hello', 'changes');
+    this.robot.brain.emit('save', this.robot.brain.data);
+    expect(CloudantDbMock.bulk).to.have.been.calledWith({ docs: [{ _id: "hello", _rev: "rev123", value: "changes" }] });
+  });
+
+
+  it('removes removed data', function() {
+    this.robot.brain.set('hello', null);
+    this.robot.brain.emit('save', this.robot.brain.data);
+    expect(CloudantDbMock.bulk).to.have.been.calledWith({ docs: [{ _deleted: true, _id: "hello", _rev: "rev123" }] });
   });
 
 

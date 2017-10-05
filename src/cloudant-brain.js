@@ -44,7 +44,7 @@ module.exports = (robot) => {
           //   rows: [ { id: 'id', key: 'id', value: { rev: 'rev' }, doc: { _id: 'id', _rev: 'rev', ... } }, ... ]
           // }
           docs.rows.forEach(doc => {
-            _private[doc.id] = doc.doc.value;
+            if (!doc.deleted) _private[doc.id] = doc.doc.value;
             rev[doc.id] = doc.doc._rev;
           });
           offset += docs.rows.length;
@@ -70,17 +70,32 @@ module.exports = (robot) => {
   robot.brain.on('save', (data) => {
     if (!db) return console.error('ERROR: hubot-cloudant-brain still not ready to save');
     let docs = [];
+    let deletes = {};
     for(let key in data._private) {
-      if (!cache[key] || !_.isEqual(cache[key], data._private[key])) {
+      if (data._private[key] === null || data._private[key] === undefined) {
+        delete data._private[key];
+        continue;
+      }
+      if (!_.isEqual(cache[key], data._private[key])) {
         docs.push({ _id: key, _rev: rev[key], value: data._private[key]});
       }
     }
+    for(let key in cache) {
+      if (data._private[key] === null || data._private[key] === undefined) {
+        deletes[key] = true;
+        docs.push({ _id: key, _rev: rev[key], _deleted: true});        
+      }
+    }
 
-    robot.logger.debug('hubot-cloudant-brain: ' + docs.length + ' new or updated records.');
+    robot.logger.debug('hubot-cloudant-brain: ' + docs.length + ' new or updated records.', docs);
     if (docs.length === 0) return;
-    db.bulk({docs:docs}, (err, body) => {
+    db.bulk({docs:docs}, (err, results) => {
       if (err) return console.error('ERROR: hubot-cloudant-brain failed to save data', err);
-      robot.logger.debug('hubot-cloudant-brain: saved ' + body.length + ' records.');
+      robot.logger.debug('hubot-cloudant-brain: saved ' + results.length + ' records.');
+      results.forEach((doc) => {
+        rev[doc.id] = doc.rev;
+      });
+      cache = deepClone(data._private);
       robot.brain.emit('saved');
     });
 
