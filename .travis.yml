@@ -2,7 +2,7 @@ language: node_js
 node_js:
   - "node"
 before_install:
-  - npm i -g makeshift && makeshift -r https://npm-registry.whitewater.ibm.com
+  - npm i -g makeshift && makeshift -s @gssc -r https://npm-registry.whitewater.ibm.com
 deploy:
   provider: npm
   email: tsaiyl@tw.ibm.com
@@ -13,3 +13,6 @@ sudo: false
 cache:
   directories:
     - node_modules
+notifications:
+  email: false
+  webhooks: https://rophy-red.mybluemix.net/travis
