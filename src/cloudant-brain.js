@@ -1,5 +1,5 @@
 // Description:
-//   hubot-cloudant-brain
+//   hubot-ibmcloudant-brain
 //
 // Configuration:
 //   CLOUDANT_URL
@@ -13,7 +13,7 @@ const _ = require('lodash');
 
 module.exports = (robot) => {
 
-  if (!process.env.CLOUDANT_URL) throw new Error('Env var CLOUDANT_URL is required for hubot-cloudant-brain to work');
+  if (!process.env.CLOUDANT_URL) throw new Error('Env var CLOUDANT_URL is required for hubot-ibmcloudant-brain to work');
 
   let db = null;
   let cache = {};
@@ -28,7 +28,7 @@ module.exports = (robot) => {
     Cloudant(url, (err, cloudant) => {
       if (err) throw err;
       db = cloudant.db.use(dbname);
-      robot.logger.info('hubot-cloudant-brain: connected to db.');
+      robot.logger.info('hubot-ibmcloudant-brain: connected to db.');
       robot.brain.setAutoSave(false);
       
       let _private = {};
@@ -56,7 +56,7 @@ module.exports = (robot) => {
         robot.brain.mergeData({_private: _private});
         robot.brain.setAutoSave(true);
         robot.brain.resetSaveInterval(30);
-        robot.logger.info('hubot-cloudant-brain: loaded ' + total + ' records.');
+        robot.logger.info('hubot-ibmcloudant-brain: loaded ' + total + ' records.');
         robot.brain.emit('connected');
       }
 
@@ -66,7 +66,7 @@ module.exports = (robot) => {
   }
 
   robot.brain.on('save', (data) => {
-    if (!db) return console.error('ERROR: hubot-cloudant-brain still not ready to save');
+    if (!db) return console.error('ERROR: hubot-ibmcloudant-brain still not ready to save');
     let docs = [];
 
 
@@ -90,11 +90,11 @@ module.exports = (robot) => {
       }
     }
 
-    robot.logger.debug('hubot-cloudant-brain: ' + docs.length + ' new or updated records.');
+    robot.logger.debug('hubot-ibmcloudant-brain: ' + docs.length + ' new or updated records.');
     if (docs.length === 0) return;
     db.bulk({docs:docs}, (err, results) => {
-      if (err) return console.error('ERROR: hubot-cloudant-brain failed to save data', err);
-      robot.logger.debug('hubot-cloudant-brain: saved ' + results.length + ' records.');
+      if (err) return console.error('ERROR: hubot-ibmcloudant-brain failed to save data', err);
+      robot.logger.debug('hubot-ibmcloudant-brain: saved ' + results.length + ' records.');
       results.forEach((doc) => {
         if (!doc.ok) console.error('ERROR', doc);
         if (deletes[doc.id]) {

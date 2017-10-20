@@ -1,22 +1,19 @@
 {
-  "name": "@gssc/hubot-cloudant-brain",
-  "description": "Cloudant brain for Hubot.",
+  "name": "hubot-ibmcloudant-brain",
+  "description": "IBM Cloudant brain for Hubot.",
   "version": "1.1.0",
   "author": "Rophy Tsai <tsaiyl@tw.ibm.com>",
-  "license": "MIT",
+  "license": "Apache v2",
   "keywords": [
     "hubot",
     "hubot-scripts"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.ibm.com/tsaiyl/hubot-cloudant-brain.git"
+    "url": "https://github.com/IBM/hubot-cloudant-brain.git"
   },
   "bugs": {
-    "url": "https://github.ibm.com/tsaiyl/hubot-cloudant-brain/issues"
-  },
-  "publishConfig": {
-    "registry": "https://npm-registry.whitewater.ibm.com/"
+    "url": "https://github.com/IBM/hubot-cloudant-brain/issues"
   },
   "peerDependencies": {
     "hubot": "3.x"
@@ -34,7 +31,7 @@
   "scripts": {
     "test": "mocha"
   },
-  "homepage": "https://github.ibm.com/tsaiyl/hubot-cloudant-brain#readme",
+  "homepage": "https://github.com/IBM/hubot-cloudant-brain#readme",
   "directories": {
     "test": "test"
   },
