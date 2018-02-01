@@ -8,7 +8,7 @@ const sinon = require('sinon');
 const Hubot = require('hubot');
 const Robot = Hubot.Robot;
 
-process.env.CLOUDANT_URL = 'https://user:pass@cloudant.com/mydb';
+process.env.CLOUDANT_URL = 'https://user:pass@cloudant.com';
 
 const CloudantMock = (ur, cb) => cb(null, { db: CloudantDbMock });
 

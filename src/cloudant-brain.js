@@ -12,23 +12,17 @@ const url = require('url');
 const _ = require('lodash');
 
 module.exports = (robot) => {
-
-  if (!process.env.CLOUDANT_URL) throw new Error('Env var CLOUDANT_URL is required for hubot-ibmcloudant-brain to work');
-
+  
+  let dbName = null;
   let db = null;
   let cache = {};
   let rev = {};
 
-  function load() {
-    let match = process.env.CLOUDANT_URL.match(/^(https?:\/\/.+)\/(.+)$/);
-    if (!match) throw new Error('DB name is missing in env var CLOUDANT_URL');
-    let url = match[1];
-    let dbname = match[2];
-    
-    Cloudant(url, (err, cloudant) => {
-      if (err) throw err;
-      db = cloudant.db.use(dbname);
-      robot.logger.info('hubot-ibmcloudant-brain: connected to db.');
+  function load(err, cloudant) {
+      if (err) return console.error(err);
+      dbName = dbName || 'hubot';
+      db = cloudant.db.use(dbName);
+      robot.logger.info('hubot-ibmcloudant-brain: connected to db: ' + dbName);
       robot.brain.setAutoSave(false);
       
       let _private = {};
@@ -62,7 +56,6 @@ module.exports = (robot) => {
 
       list(0);
       
-    });
   }
 
   robot.brain.on('save', (data) => {
@@ -110,7 +103,16 @@ module.exports = (robot) => {
 
   
   });
-
-  load();
+  
+  
+  // Check for old URL syntax.
+  if (process.env.CLOUDANT_DB) dbName = process.env.CLOUDANT_DB;
+  if (process.env.CLOUDANT_URL) {
+    let match = process.env.CLOUDANT_URL.match(/^(https?:\/\/.+)\/(.+)$/);
+    let url = match ? match[1] : process.env.CLOUDANT_URL;
+    dbName = match ? match[2] : dbName;
+    Cloudant(url, load);
+  } else if (process.env.VCAP_SERVICES) Cloudant({ vcapServices: JSON.parse(process.env.VCAP_SERVICES) }, load);
+  else console.error('hubot-ibmcloudant-brain: missing env var CLOUDANT_URL');
 
 }
